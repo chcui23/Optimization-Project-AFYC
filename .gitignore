@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+top500_data/
+part3_output/
+.DS_Store
