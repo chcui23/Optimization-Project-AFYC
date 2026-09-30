@@ -281,20 +281,33 @@ def _tracking_diagnostics(stock_returns, benchmark_returns, weights):
 def weight_one_month(
     formation_month, formations, history, selections, benchmarks,
     lookback=60, expected_n=500, objective='tracking_error',
-    max_weight=1.0, ridge=0.0,
+    max_weight=1.0, ridge=0.0, missing_benchmark='raise', min_training_months=48,
 ):
     """Return long-format weights and in-sample diagnostics for both benchmarks.
 
-    An incomplete benchmark window is an explicit failure, not a shorter fit.
-    No t+1 returns are used, including when choosing the eligible universe.
+    By default an incomplete benchmark window fails. With missing_benchmark
+    set to 'drop', fit only complete benchmark months within the same lookback
+    window, require min_training_months, and record all exclusions. Stock
+    selection still requires the full history. No t+1 returns are used.
     """
     month = pd.Period(formation_month, freq='M')
     calendar = pd.period_range(month - lookback + 1, month, freq='M')
     training = benchmarks.reindex(calendar)[list(BENCHMARKS)]
     complete_months = np.isfinite(training.to_numpy(dtype=float)).all(axis=1)
-    if not complete_months.all():
-        bad = training.index[~complete_months].astype(str).tolist()
+    bad = training.index[~complete_months].astype(str).tolist()
+    if missing_benchmark not in ('raise', 'drop'):
+        raise ValueError("missing_benchmark must be 'raise' or 'drop'")
+    if missing_benchmark == 'raise' and bad:
         raise ValueError(f'{month}: incomplete benchmark training window: {bad}')
+    if missing_benchmark == 'drop':
+        if not 2 <= min_training_months <= lookback:
+            raise ValueError('Require 2 <= min_training_months <= lookback')
+        training = training.loc[complete_months]
+        if len(training) < min_training_months:
+            raise ValueError(
+                f'{month}: only {len(training)} complete benchmark months; '
+                f'require at least {min_training_months}'
+            )
     universe, returns, memberships = reconstruct_clusters(
         month, formations, history, selections, lookback, expected_n
     )
@@ -306,7 +319,7 @@ def weight_one_month(
             representative, coverage = representative_weights(
                 universe, members, selected, benchmark
             )
-            x = returns.loc[:, representative.index]
+            x = returns.loc[training.index, representative.index]
             y = training[benchmark]
             optimized, solver = fit_tracking_weights(
                 x, y, representative,
@@ -330,7 +343,10 @@ def weight_one_month(
                     **keys,
                     'training_start': str(calendar[0]),
                     'training_end': str(month),
-                    'n_training_months': lookback,
+                    'n_training_months': len(training),
+                    'missing_benchmark_policy': missing_benchmark,
+                    'n_excluded_training_months': len(bad),
+                    'excluded_training_months': ';'.join(bad),
                     'n_eligible': returns.shape[1],
                     'benchmark_mass_covered': coverage,
                     **_tracking_diagnostics(x, y, weights),

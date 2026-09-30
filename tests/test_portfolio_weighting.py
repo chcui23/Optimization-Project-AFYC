@@ -149,6 +149,26 @@ class WeightingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'incomplete benchmark'):
             weight_one_month(month, formations, history, selections, benchmarks, lookback=6, expected_n=8)
 
+    def test_explicit_incomplete_benchmark_policy(self):
+        formations, history, selections, month = fixture()
+        benchmarks = build_benchmark_returns(formations, history, 8)
+        benchmarks.loc[month - 2, 'equal_weighted'] = np.nan
+        weights, diagnostics = weight_one_month(
+            month, formations, history, selections, benchmarks,
+            lookback=6, expected_n=8, missing_benchmark='drop', min_training_months=5,
+        )
+        self.assertTrue(diagnostics['n_training_months'].eq(5).all())
+        self.assertTrue(diagnostics['n_excluded_training_months'].eq(1).all())
+        self.assertTrue(diagnostics['excluded_training_months'].eq(str(month - 2)).all())
+        np.testing.assert_allclose(
+            weights.groupby(['k', 'benchmark', 'method'])['weight'].sum(), 1,
+        )
+        with self.assertRaisesRegex(ValueError, 'require at least 6'):
+            weight_one_month(
+                month, formations, history, selections, benchmarks,
+                lookback=6, expected_n=8, missing_benchmark='drop', min_training_months=6,
+            )
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,5 +3,8 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 top500_data/
-part3_output/
+part3_output/*
+!part3_output/monthly_weights_2020-01_to_2025-12.csv
+!part3_output/monthly_weight_diagnostics_2020-01_to_2025-12.csv
+!part3_output/benchmark_returns_2020-01_to_2025-12.csv
 .DS_Store
