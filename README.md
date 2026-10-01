@@ -10,6 +10,8 @@ equal-weighted benchmarks.
 3. **[`part3.ipynb`](part3.ipynb)** — Person 3: explanation, representative
    weighting, constrained tracking-error optimization, and exports for Person 4.
    Reusable functions are in [`portfolio_weighting.py`](portfolio_weighting.py).
+4. **[`part4.ipynb`](part4.ipynb)** — Person 4: rolling out-of-sample evaluation,
+   drift-adjusted turnover, common-date comparison, result tables, and charts.
 
 For Part 3, use Python 3.11 or newer and install the dependencies in a virtual
 environment:
@@ -77,3 +79,58 @@ observations). It contains 50,400 stock-weight rows across 864 portfolios.
 The January 2020–December 2025 monthly weights, diagnostics, and benchmark audit
 CSVs are included in `part3_output/`. Raw data, temporary results, and local
 environments are excluded from Git.
+
+## Part 4: backtesting
+
+Open `part4.ipynb` from this directory and run its cells in order. It consumes
+Person 1's two `top500_data/` CSVs (obtain these raw files from the team) and
+Person 3's committed exports in `part3_output/`:
+
+- `monthly_weights_2020-01_to_2025-12.csv`
+- `monthly_weight_diagnostics_2020-01_to_2025-12.csv`
+- `benchmark_returns_2020-01_to_2025-12.csv`
+
+The requested holding period is **January 2020–December 2025**. Formation weights
+apply only to the next month. Part 4 verifies Part 3's recorded policy of retaining
+at least 48 complete observations within each 60-month training window, including
+the exact excluded dates. It does not execute or modify Part 3 or refit weights.
+Earlier exports named `portfolio_weights.csv` and `excluded_formation_months.csv`
+are not used.
+
+Part 4 reconstructs and verifies the benchmark export, validates portfolio keys
+and weights, and compares all 12 strategies on the same valid dates. Missing
+held-stock returns invalidate observations; zero-weight candidates do not require
+a return. The coverage audit includes missing weight months and the reason each
+strategy-month was omitted. Resolve upstream return/delisting issues before
+drawing conclusions from an incomplete sample.
+
+The saved real-data run evaluates all 12 strategies on **70 of 72 holding months**.
+April 2020 and October 2025 are excluded because realized benchmark returns are
+missing. Section 8 summarizes the results and limitations; refresh this narrative
+if the inputs or experiment change.
+
+Turnover compares new weights with the previous month's return-drifted holdings,
+including stocks entering and exiting. Initial investment and undefined turnover
+after gaps are excluded from the mean and counted explicitly. Cumulative returns
+and CAGR restart in each continuous common block. Cumulative charts show the
+longest block; the tables cover every block. All performance is gross of costs.
+
+Outputs in ignored `part4_output/` include:
+
+- `summary_statistics.csv`: tracking error, tracking difference, RMSE,
+  correlation, and turnover with observation counts for all 12 strategies.
+- `common_monthly_results.csv` and `continuous_block_statistics.csv`: matched
+  returns, turnover, block wealth, cumulative returns, and CAGR.
+- `all_strategy_months.csv`, `coverage_audit.csv`, `coverage_by_month.csv`,
+  `invalid_held_stock_returns.csv`, and `missing_benchmark_constituents.csv`:
+  realized-return coverage diagnostics.
+- `training_coverage.csv`, `excluded_training_observations.csv`, and
+  `upstream_weight_diagnostics.csv`: Person 3's training audit.
+- `tracking_error_comparison.csv`, four PNG figures, upstream audit copies,
+  and `run_manifest.json` with settings, versions, and input file hashes.
+
+`tests/test_part4.py` exercises the notebook's functions directly and executes all
+notebook code cells against a temporary synthetic 500-stock handoff. These tests
+need no WRDS account and never write synthetic data into the real data folders.
+Run them with the same unittest command above. Synthetic validation is not an
+empirical backtest result.

@@ -7,4 +7,5 @@ part3_output/*
 !part3_output/monthly_weights_2020-01_to_2025-12.csv
 !part3_output/monthly_weight_diagnostics_2020-01_to_2025-12.csv
 !part3_output/benchmark_returns_2020-01_to_2025-12.csv
+part4_output/
 .DS_Store
