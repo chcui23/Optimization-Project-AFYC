@@ -138,6 +138,23 @@ class WeightingTests(unittest.TestCase):
             build_benchmark_returns(future_formations, future, 8), lookback=6, expected_n=8)
         pd.testing.assert_frame_equal(weights, changed)
 
+    def test_benchmark_keeps_return_after_stock_leaves_universe(self):
+        formations = pd.DataFrame({
+            'month': pd.PeriodIndex(['2000-01', '2000-01', '2000-02', '2000-02'], freq='M'),
+            'permno': [1, 2, 2, 3],
+            'mthcap': [3.0, 1.0, 5.0, 5.0],
+        })
+        history = pd.DataFrame({
+            'month': pd.PeriodIndex(['2000-02'] * 3, freq='M'),
+            'permno': [1, 2, 3],
+            'mthret': [0.10, -0.10, 0.80],
+        })
+        benchmark = build_benchmark_returns(formations, history, expected_n=2)
+        february = benchmark.loc[pd.Period('2000-02', freq='M')]
+        self.assertAlmostEqual(february['value_weighted'], 0.05)
+        self.assertAlmostEqual(february['equal_weighted'], 0.0)
+        self.assertEqual(february['n_missing_returns'], 0)
+
     def test_bad_selection_and_incomplete_training_stop(self):
         formations, history, selections, month = fixture()
         benchmarks = build_benchmark_returns(formations, history, 8)

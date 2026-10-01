@@ -4,7 +4,7 @@ Small-stock portfolios tracking monthly top-500 CRSP value-weighted and
 equal-weighted benchmarks.
 
 1. `data_extraction.ipynb` — Person 1: export formations and monthly history to
-   `top500_data/` (requires WRDS access). These two CSVs are not in this checkout.
+   `top500_data/` (requires WRDS access). These two raw CSVs are not tracked in Git.
 2. `part2.ipynb` — Person 2: select cluster representatives for k = 25, 50, 100.
    The resulting `cluster_selected_stocks.csv` is included.
 3. **[`part3.ipynb`](part3.ipynb)** — Person 3: explanation, representative
@@ -23,17 +23,24 @@ python -m jupyterlab
 
 Run the notebook from this directory after obtaining Person 1's exports.
 Person 1's extraction also requires the `wrds` package and WRDS credentials.
-Part 3 writes
-`part3_output/portfolio_weights.csv`, `weight_diagnostics.csv`,
-`benchmark_returns.csv`, and `excluded_formation_months.csv`.
+The notebook and command-line exporter use the same monthly export function and
+write matching weights, diagnostics, and benchmark audit files in `part3_output/`.
+The notebook uses the `drop` policy described below, with at least 48 complete
+observations in each 60-month training window.
 
 Weights formed at month-end t apply to month t+1. Representative weights
 normalize over the complete-history subset clustered by Person 2; optimization
 targets the full 500-stock benchmark. The notebook explains this coverage gap,
 missing-return checks, the one-month startup delay caused by unavailable December
 1994 holdings, and the distinction between fitted and out-of-sample results.
-Person 4 should evaluate all strategies on the same dates and disclose or resolve
-excluded formation months.
+Person 4 should evaluate all strategies on the same holding dates and disclose
+excluded training observations and unresolved realized returns.
+
+Person 1's updated history export retains all available months for stocks ever
+selected, including months after they leave the top 500. Part 3 uses that entire
+history; it does not join it to same-month universe membership. The extraction
+update in `0db0a4a` adds comments and `.copy()` without changing the row selection,
+so it alone does not repair missing returns or imply different portfolio weights.
 
 To export monthly stock weights starting with the January 2020 holding month:
 
