@@ -92,13 +92,13 @@ Open `part4.ipynb` from this directory and run its cells in order. It consumes
 Person 1's two `top500_data/` CSVs (obtain these raw files from the team) and
 Person 3's committed exports in `part3_output/`:
 
-- `monthly_weights_2020-01_to_2025-12.csv`
-- `monthly_weight_diagnostics_2020-01_to_2025-12.csv`
-- `benchmark_returns_2020-01_to_2025-12.csv`
+- `monthly_weights_2000-01_to_2025-12.csv`
+- `monthly_weight_diagnostics_2000-01_to_2025-12.csv`
+- `benchmark_returns_2000-01_to_2025-12.csv`
 
-The current Part 4 holding period is **January 2020–December 2025**. Formation weights
+The current Part 4 holding period is **January 2000–December 2025**. Formation weights
 apply only to the next month. Part 4 verifies Part 3's recorded policy of retaining
-at least 48 complete observations within each 60-month training window, including
+at least 36 complete observations within each 60-month training window, including
 the exact excluded dates. It does not execute or modify Part 3 or refit weights.
 Earlier exports named `portfolio_weights.csv` and `excluded_formation_months.csv`
 are not used.
@@ -110,10 +110,12 @@ a return. The coverage audit includes missing weight months and the reason each
 strategy-month was omitted. Resolve upstream return/delisting issues before
 drawing conclusions from an incomplete sample.
 
-The saved real-data run evaluates all 12 strategies on **70 of 72 holding months**.
-April 2020 and October 2025 are excluded because realized benchmark returns are
-missing. Section 8 summarizes the results and limitations; refresh this narrative
-if the inputs or experiment change.
+Part 4 requests all 312 holding months and evaluates all 12 strategies on common
+valid dates. It audits missing realized returns separately from training exclusions.
+January 1995's benchmark return cannot be reconstructed without December 1994
+holdings; Part 3 declares it as a dropped training observation for January 2000.
+Part 4 verifies that declaration without inventing a return or changing the weights.
+Section 8 generates the findings, coverage, and limitations from each run's results.
 
 Turnover compares new weights with the previous month's return-drifted holdings,
 including stocks entering and exiting. Initial investment and undefined turnover

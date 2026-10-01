@@ -162,30 +162,31 @@ class BacktestTests(unittest.TestCase):
             root = Path(folder)
             (root / "top500_data").mkdir()
             (root / "part3_output").mkdir()
-            months = pd.period_range("2014-12", "2020-04", freq="M")
+            months = pd.period_range("1995-01", "2000-03", freq="M")
             ids = np.arange(1, 501)
             f = pd.MultiIndex.from_product([months, ids], names=["month", "permno"]).to_frame(index=False)
             f["mthcap"] = 100.0
             h = f[["month", "permno"]].copy()
             h["mthret"] = np.repeat(0.01 + 0.02 * np.sin(np.arange(len(months))), 500)
             # Exercise Part 3's new drop policy: one incomplete TRAINING month.
-            h = h.loc[~(h.month.eq(pd.Period("2018-03")) & h.permno.eq(500))]
+            h = h.loc[~(h.month.eq(pd.Period("1998-03")) & h.permno.eq(500))]
             f.to_csv(root / "top500_data/top500_formations.csv", index=False)
             h.to_csv(root / "top500_data/selected_stock_monthly_history.csv", index=False)
-            suffix = "2020-01_to_2025-12.csv"
+            suffix = "2000-01_to_2025-12.csv"
             build_benchmark_returns(f, h).to_csv(root / f"part3_output/benchmark_returns_{suffix}")
             rows, diagnostics = [], []
-            for month in pd.period_range("2020-02", "2020-04", freq="M"):
+            for month in pd.period_range("2000-01", "2000-03", freq="M"):
                 for k in (25, 50, 100):
                     for benchmark in namespace["BENCHMARKS"]:
                         for method in namespace["METHODS"]:
                             keys = dict(holding_month=str(month), formation_month=str(month - 1),
                                         k=k, benchmark=benchmark, method=method)
+                            first = month == pd.Period("2000-01")
                             diagnostics.append(dict(**keys, training_start=str(month - 60),
-                                                    training_end=str(month - 1), n_training_months=59,
+                                                    training_end=str(month - 1), n_training_months=58 if first else 59,
                                                     missing_benchmark_policy="drop",
-                                                    n_excluded_training_months=1,
-                                                    excluded_training_months="2018-03"))
+                                                    n_excluded_training_months=2 if first else 1,
+                                                    excluded_training_months="1995-01;1998-03" if first else "1998-03"))
                             rows.extend(dict(**keys, permno=int(i), weight=1/k) for i in ids[:k])
             pd.DataFrame(rows).to_csv(root / f"part3_output/monthly_weights_{suffix}", index=False)
             pd.DataFrame(diagnostics).to_csv(root / f"part3_output/monthly_weight_diagnostics_{suffix}", index=False)
@@ -209,7 +210,9 @@ class BacktestTests(unittest.TestCase):
             self.assertEqual(len(list((root / "part4_output").glob("*.png"))), 4)
             manifest = json.loads((root / "part4_output/run_manifest.json").read_text())
             self.assertEqual(manifest["common_months"], 3)
-            self.assertEqual(manifest["actual_training_observations_min"], 59)
+            self.assertEqual(manifest["actual_training_observations_min"], 58)
+            self.assertEqual(manifest["minimum_training_observations"], 36)
+            self.assertEqual(manifest["requested_start"], "2000-01")
             self.assertEqual(manifest["training_policy"], ["drop"])
             self.assertTrue(pd.read_csv(root / "part4_output/missing_benchmark_constituents.csv").empty)
 
@@ -244,6 +247,26 @@ class BacktestTests(unittest.TestCase):
         bad.loc[0, "missing_benchmark_policy"] = "raise"
         with self.assertRaisesRegex(ValueError, "raise policy"):
             validate_training(bad, w, b, lookback=6, min_training=4)
+
+    def test_extended_training_threshold_accepts_36_and_rejects_35(self):
+        w, _, _ = fixture()
+        w = w.loc[w.holding_month.eq("2000-02")]
+        calendar = pd.period_range("1995-02", "2000-01", freq="M")
+        b = pd.DataFrame({"value_weighted": 0.01, "equal_weighted": 0.02}, index=calendar)
+        b.iloc[:24] = np.nan
+        d = w.drop_duplicates(namespace["PORTFOLIO_KEYS"])[namespace["PORTFOLIO_KEYS"]].copy()
+        d["formation_month"] = "2000-01"
+        d["training_start"], d["training_end"] = "1995-02", "2000-01"
+        d["missing_benchmark_policy"] = "drop"
+        d["n_training_months"], d["n_excluded_training_months"] = 36, 24
+        d["excluded_training_months"] = ";".join(calendar[:24].astype(str))
+        checked, _ = validate_training(d, w, b)
+        self.assertTrue(checked.n_training_months.eq(36).all())
+        b.iloc[24] = np.nan
+        d["n_training_months"], d["n_excluded_training_months"] = 35, 25
+        d["excluded_training_months"] = ";".join(calendar[:25].astype(str))
+        with self.assertRaisesRegex(ValueError, "fewer than 36"):
+            validate_training(d, w, b)
 
 
 if __name__ == "__main__":
