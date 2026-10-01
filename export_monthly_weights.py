@@ -15,7 +15,7 @@ from portfolio_weighting import (
 
 def export_monthly_weights(
     formations, history, selections, output_dir='part3_output',
-    start='2020-01', end=None, missing_benchmark='raise', min_training_months=48,
+    start='2000-01', end=None, missing_benchmark='raise', min_training_months=48,
     objective='tracking_error', max_weight=1.0, ridge=0.0,
 ):
     """Shared notebook/CLI export; return weights, diagnostics, and benchmarks.
@@ -95,7 +95,7 @@ def main():
     parser.add_argument('--data-dir', type=Path, default=Path('top500_data'))
     parser.add_argument('--selections', type=Path, default=Path('cluster_selected_stocks.csv'))
     parser.add_argument('--output-dir', type=Path, default=Path('part3_output'))
-    parser.add_argument('--start', default='2020-01', help='First holding month (YYYY-MM)')
+    parser.add_argument('--start', default='2000-01', help='First holding month (YYYY-MM)')
     parser.add_argument('--end', help='Last holding month; defaults to available data end')
     parser.add_argument('--missing-benchmark', choices=['raise', 'drop'], default='raise')
     parser.add_argument('--min-training-months', type=int, default=48)
